@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report: {{ city }} | Map Intelligence</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        :root {
+            --bg: #f4f7f6; --text: #2c3e50; --accent: #3498db;
+            --glass: rgba(255, 255, 255, 0.9); --border: rgba(255, 255, 255, 0.8);
+            --shadow: rgba(0,0,0,0.05);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a; --text: #f1f5f9; --accent: #d4fc79;
+            --glass: rgba(30, 41, 59, 0.9); --border: rgba(255, 255, 255, 0.1);
+            --shadow: rgba(0,0,0,0.4);
+        }
+
+        body { 
+            margin: 0; padding: 0; height: 100vh; 
+            font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg); color: var(--text); 
+            transition: background 0.5s ease; position: relative;
+        }
+
+        #map { height: 100%; width: 100%; z-index: 1; }
+
+        /* Floating Controls */
+        .controls {
+            position: fixed; top: 20px; left: 20px; z-index: 1000;
+            display: flex; gap: 10px;
+        }
+
+        .floating-box {
+            background: var(--glass); backdrop-filter: blur(10px);
+            padding: 15px 25px; border-radius: 15px;
+            border: 1px solid var(--border); box-shadow: 0 4px 15px var(--shadow);
+            text-decoration: none; color: var(--text); font-weight: bold;
+        }
+
+        .info-card {
+            position: fixed; bottom: 30px; right: 20px; z-index: 1000;
+            background: var(--glass); backdrop-filter: blur(10px);
+            padding: 25px; border-radius: 20px;
+            border: 1px solid var(--border); box-shadow: 0 10px 30px var(--shadow);
+            width: 250px;
+        }
+
+        h3 { margin-top: 0; font-size: 14px; opacity: 0.6; text-transform: uppercase; }
+        .aqi-val { font-size: 48px; font-weight: bold; color: var(--accent); margin: 5px 0; }
+    </style>
+</head>
+<body data-theme="{{ current_theme }}">
+    
+    <div class="controls">
+        <a href="/" class="floating-box">← BACK TO CONFIGURATOR</a>
+    </div>
+
+    <div class="info-card">
+        <h3>Sensor Location</h3>
+        <h2 style="margin: 5px 0 20px 0;">📍 {{ city }}</h2>
+        <h3>Predicted AQI (Forest)</h3>
+        <div class="aqi-val">{{ rf }}</div>
+        <h3>Regression AQI</h3>
+        <div style="font-weight: bold; opacity: 0.7;">{{ lr }}</div>
+    </div>
+
+    <div id="map"></div>
+
+    <input type="hidden" id="js-lat" value="{{ coords[0] }}">
+    <input type="hidden" id="js-lng" value="{{ coords[1] }}">
+    <input type="hidden" id="js-rf" value="{{ rf }}">
+
+    <script>
+        // 1. Setup variables from HTML (Standard JS practice)
+        const lat = Number(document.getElementById('js-lat').value);
+        const lng = Number(document.getElementById('js-lng').value);
+        const rfVal = document.getElementById('js-rf').value;
+
+        // 2. Map Initialization
+        // Use standard OSM but apply persistent theme effects
+        const map = L.map('map').setView([lat, lng], 11);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CartoDB'
+        }).addTo(map);
+
+        // 3. Pointer & Circle logic ( Expression expected is fixed)
+        const marker = L.marker([lat, lng]).addTo(map);
+        
+        // Aura color logic based on Python category (Expression Expected is cleared here)
+        let auraColor = "#2ecc71"; // Good
+        if (rfVal > 80) auraColor = "#f1c40f"; // Moderate
+        if (rfVal > 150) auraColor = "#e74c3c"; // Severe
+
+        L.circle([lat, lng], {
+            color: auraColor,
+            fillColor: auraColor,
+            fillOpacity: 0.4,
+            radius: 4000
+        }).addTo(map);
+
+        marker.bindPopup(`<b>{{ city }}</b><br>Predicted AQI: ${rfVal}`).openPopup();
+
+    </script>
+</body>
+</html>

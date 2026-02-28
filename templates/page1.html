@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Atmospheric Configurator | Page 1</title>
+    <style>
+        :root {
+            --accent: #3498db;
+            --bg: linear-gradient(135deg, #e0f2f1 0%, #ffffff 100%);
+            --card-bg: rgba(255, 255, 255, 0.4);
+            --text-color: #2c3e50;
+        }
+
+        [data-theme="dark"] {
+            --bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --card-bg: rgba(30, 41, 59, 0.6);
+            --text-color: #f1f5f9;
+        }
+
+        body {
+            margin: 0; min-height: 100vh; font-family: 'Segoe UI', sans-serif;
+            background: var(--bg); display: flex; justify-content: center; align-items: center;
+            overflow: hidden; position: relative; transition: background 0.5s ease;
+        }
+
+        /* --- THE GLASS CARD --- */
+        .config-card {
+            background: var(--card-bg); backdrop-filter: blur(25px);
+            padding: 40px; border-radius: 35px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 420px; text-align: center; z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-color);
+        }
+
+        /* --- WEATHER WIDGET --- */
+        .weather-glance {
+            margin-bottom: 25px; padding: 15px; border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex; justify-content: space-around; align-items: center;
+        }
+
+        /* --- BUTTON SELECTION --- */
+        .module-selector { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 25px 0; }
+        .toggle-btn {
+            display: block; padding: 15px; border-radius: 15px; border: 2px solid rgba(0,0,0,0.05);
+            background: white; color: #7f8c8d; font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        input[type="checkbox"] { display: none; }
+        input[type="checkbox"]:checked + .toggle-btn {
+            border-color: var(--accent); background-color: rgba(52, 152, 219, 0.1); color: var(--accent);
+        }
+
+        select, .btn-submit { width: 100%; padding: 15px; border-radius: 15px; border: 1px solid rgba(0,0,0,0.1); margin-top: 10px; font-size: 16px; }
+        .btn-submit { border: none; font-weight: bold; cursor: pointer; color: white; transition: 0.3s; }
+        .btn-analytics { background: var(--accent); }
+        .btn-map { background: #2ecc71; }
+
+        /* --- THEME TOGGLE --- */
+        .theme-switcher { position: absolute; top: 20px; right: 20px; z-index: 1000; }
+        .toggle-mode-btn { padding: 10px 20px; border-radius: 50px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body data-theme="light">
+
+    <div class="theme-switcher">
+        <button class="toggle-mode-btn" onclick="toggleMode()">🌙 CHANGE MODE</button>
+    </div>
+
+    <div class="config-card">
+        <h2>VayuSense</h1>
+        
+        <div class="weather-glance">
+            <div style="text-align: left;">
+                <small style="text-transform: uppercase; opacity: 0.7;">Local Temp</small>
+                <div id="temp-display" style="font-size: 24px; font-weight: bold;">--°C</div>
+            </div>
+            <div style="font-size: 30px;">🌤️</div>
+        </div>
+
+        <form action="/process" method="POST">
+            <input type="hidden" name="current_theme" id="currentThemeFlag" value="light">
+            
+            <label style="display:block; text-align:left; font-size:12px; font-weight:bold;">SENSING LOCATION</label>
+            <select name="city" id="city-select" onchange="updateWeather()">
+                <option value="" disabled selected>Select a City</option>
+                {% for c in cities %}<option value="{{c}}">{{c}}</option>{% endfor %}
+            </select>
+
+            <div class="module-selector">
+                <label><input type="checkbox" name="showLR" checked><span class="toggle-btn">LINEAR REGRESSION</span></label>
+                <label><input type="checkbox" name="showRF" checked><span class="toggle-btn">RANDOM FOREST</span></label>
+                <label><input type="checkbox" name="showRadar" checked><span class="toggle-btn">POLLUTANT SCAN</span></label>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <button type="submit" name="view_choice" value="dashboard" class="btn-submit btn-analytics">ANALYTICS</button>
+                <button type="submit" name="view_choice" value="map" class="btn-submit btn-map">MAP VIEW</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function toggleMode() {
+            const body = document.body;
+            const themeFlag = document.getElementById('currentThemeFlag');
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.setAttribute('data-theme', 'light');
+                themeFlag.value = 'light';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeFlag.value = 'dark';
+            }
+        }
+
+        function updateWeather() {
+            // Mock logic: updates temp when city changes
+            const temp = Math.floor(Math.random() * (35 - 18) + 18);
+            document.getElementById('temp-display').innerText = `${temp}°C`;
+        }
+    </script>
+</body>
+</html>

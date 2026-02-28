@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report: {{ city }} | Atmospheric Sensing</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f4f7f6; --text: #2c3e50; --accent: #3498db;
+            --glass: rgba(255, 255, 255, 0.85); --border: rgba(255, 255, 255, 0.8);
+            --shadow: rgba(0,0,0,0.03); --particle-color: rgba(52, 152, 219, 0.05);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a; --text: #f1f5f9; --accent: #d4fc79;
+            --glass: rgba(30, 41, 59, 0.8); --border: rgba(255, 255, 255, 0.1);
+            --shadow: rgba(0,0,0,0.4); --particle-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body { 
+            margin: 0; padding: 40px; min-height: 100vh; 
+            font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg); color: var(--text); 
+            transition: background 0.5s ease, color 0.5s ease; position: relative;
+        }
+
+        /* Subtle Background Atmosphere */
+        #particle-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        .particle { position: absolute; background-color: var(--particle-color); border-radius: 50%; animation: particleFloat infinite ease-in-out; }
+        @keyframes particleFloat { 0% { transform: translateY(100vh); opacity: 0; } 10% { opacity: 0.8; } 100% { transform: translateY(-20vh); opacity: 0; } }
+
+        .container { max-width: 1100px; margin: auto; z-index: 10; position: relative; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        
+        .card { 
+            background: var(--glass); backdrop-filter: blur(15px); padding: 35px; border-radius: 30px; 
+            border: 1px solid var(--border); box-shadow: 0 10px 30px var(--shadow); position: relative;
+        }
+
+        .aqi-val { font-size: 72px; font-weight: bold; color: var(--accent); margin: 10px 0; }
+        .status-pill { padding: 10px 25px; border-radius: 50px; font-weight: bold; font-size: 12px; color: white; text-transform: uppercase; }
+        .good { background: #2ecc71; } .moderate { background: #f1c40f; color: #2c3e50; } .severe { background: #e74c3c; }
+
+        .advisory-box { margin-top: 25px; padding: 20px; border-radius: 20px; background: rgba(0,0,0,0.03); border-left: 5px solid var(--accent); font-size: 15px; }
+
+        .back-link { color: var(--accent); text-decoration: none; border: 2px solid var(--accent); padding: 12px 25px; border-radius: 15px; font-weight: bold; transition: 0.3s; }
+        .back-link:hover { background: var(--accent); color: var(--bg); }
+        h3 { margin-top: 0; font-size: 14px; opacity: 0.6; text-transform: uppercase; }
+    </style>
+</head>
+<body data-theme="{{ current_theme }}">
+    
+    <div id="particle-container"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; letter-spacing: 2px;">📍 {{ city }}</h1>
+            <a href="/" class="back-link">START OVER</a>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <span class="status-pill {{ category }}">{{ category }} QUALITY</span>
+                {% if show_rf %}
+                    <div style="margin-top: 25px;"><small style="opacity:0.5; text-transform:uppercase;">Random Forest AQI</small><div class="aqi-val">{{ pred_rf }}</div></div>
+                {% endif %}
+                {% if show_lr %}
+                    <div><small style="opacity:0.5; text-transform:uppercase;">Linear Model AQI</small><div style="font-size:32px; font-weight:bold; opacity:0.7;">{{ pred_lr }}</div></div>
+                {% endif %}
+                
+                <div class="advisory-box">
+                    <strong>Sensor Advisory:</strong><br>
+                    {{ recommendation }}
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Analytics Comparison</h3>
+                <canvas id="barChart"></canvas>
+            </div>
+
+            {% if show_radar %}
+            <div class="card" style="grid-column: span 2; display: flex; flex-direction: column; align-items: center;">
+                <h3>Pollutant Distribution (µg/m³)</h3>
+                <div style="width: 400px;"><canvas id="radarChart"></canvas></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <input type="hidden" id="js-lr" value="{{ pred_lr }}">
+    <input type="hidden" id="js-rf" value="{{ pred_rf }}">
+    <input type="hidden" id="js-p-lbl" value='{{ pollutants|safe }}'>
+    <input type="hidden" id="js-p-val" value='{{ pollutant_values|safe }}'>
+
+    <script>
+        // 1. DATA (Declared ONCE at the top)
+        const lrVal = Number(document.getElementById('js-lr').value);
+        const rfVal = Number(document.getElementById('js-rf').value);
+        const pLabels = JSON.parse(document.getElementById('js-p-lbl').value);
+        const pValues = JSON.parse(document.getElementById('js-p-val').value);
+
+        // 2. Charts Initialization
+        // Bar Chart
+        const barCtx = document.getElementById('barChart').getContext('2d');
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Linear', 'Forest'],
+                datasets: [{ 
+                    data: [lrVal, rfVal], 
+                    backgroundColor: ['#bdc3c7', '#3498db'], 
+                    borderRadius: 10 
+                }]
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } } } }
+        });
+
+        // Radar Chart (Conditionally)
+        const radarCtx = document.getElementById('radarChart');
+        if (radarCtx) {
+            new Chart(radarCtx.getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: pLabels,
+                    datasets: [{ 
+                        label: 'Level', 
+                        data: pValues, 
+                        backgroundColor: 'rgba(52, 152, 219, 0.2)', 
+                        borderColor: '#3498db',
+                        pointBackgroundColor: '#3498db'
+                    }]
+                },
+                options: { scales: { r: { ticks: { display: false }, grid: { color: 'rgba(0,0,0,0.1)' } } }, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // 3. Particle Generation
+        const container = document.getElementById('particle-container');
+        for (let i = 0; i < 20; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            const size = Math.random() * 5 + 3 + 'px';
+            p.style.width = size; p.style.height = size;
+            p.style.left = Math.random() * 100 + 'vw';
+            p.style.animationDuration = Math.random() * 15 + 10 + 's';
+            p.style.animationDelay = Math.random() * 10 + 's';
+            container.appendChild(p);
+        }
+    </script>
+</body>
+</html>
