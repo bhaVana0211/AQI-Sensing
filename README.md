@@ -50,6 +50,6 @@ The project is built upon the city_day.csv dataset, focusing on several key feat
   <li>Dark Mode: A "Midnight" theme designed to reduce eye strain, using deep slate tones and neon accents for data points.</li>
  
 </ul>
-![image alt](https://github.com/bhaVana0211/AQI-Sensing/blob/27d167d9612928cc3fd8304f8143910d8b9798d4/Screenshot%202026-02-28%20125814.png)
+
 
 
